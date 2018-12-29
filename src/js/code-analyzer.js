@@ -1,207 +1,205 @@
 import * as esprima from 'esprima';
 import * as escodegen from 'escodegen';
-import * as spliting from 'split-string';
 
-let redsAndGreens = [];
-let numOfRows = 0;
-let funcDecl = [];
+let diagram;
+let nodeNum;
 
-const parseCode = (codeToParse) => {
-    let res = esprima.parseScript(codeToParse, {loc : true});
-    return res;
-};
-
-const makeParams = (str, vardecs) => {
-    let res = {};
-    let vals = spliting(str, {separator: ',', brackets: true});
-    for(let i = 0; i < vardecs.length; i++){
-        res[escodegen.generate(vardecs[i])] =
-            esprima.parseScript(vals[i]).body[0].expression;
-    }
-    return res;
-};
-
-export function makeTableHTML(parsedCode, parsedParams) {
-    let res = '<pre>';
-    let codeString = makeTable(parsedCode, parsedParams);
-    let splitted = codeString.split('\n');
-    for(let i = 0; i < splitted.length; i++){
-        let color = pickColor(redsAndGreens[i+1]);
-        if(redsAndGreens[i+1] !== undefined)
-            res += '<span style="background-color:'
-                + color + ';">' + splitted[i] + '</span>';
-        else
-            res += splitted[i];
-        res += '\n';
-    }
-    res += '</pre>';
-    return res;
-}
-
-function pickColor(x){
-    if(x)
-        return 'green';
-    return 'red';
-}
-
-export const makeTable = (parsedCode, parsedParams) => {
-    numOfRows = 0;
-    funcDecl = [];
-    redsAndGreens = [];
-    let newBody = [];
+export function makeDiagram(code, params) {
+    diagram = '';
+    nodeNum = 1;
+    let exp = esprima.parseScript(code);
+    let paramsArr = eval('[' + params + ']');
     let env = {};
-    parsedCode.body.forEach ((exp) =>{
-        let x = parseExp(exp, env, parsedParams);
-        newBody = [...newBody ,x];
-    });
-    parsedCode.body = newBody.filter(exp => exp);
-    return fixArrays(parsedCode);
-};
-
-function fixArrays (parsedCode1){
-    let parsedCode = escodegen.generate(parsedCode1);
-    let j;
-    let res = '';
-    for(let i =0; i < parsedCode.length; i++){
-        if(parsedCode.charAt(i) === '['){
-            j = i;
-            while(parsedCode.charAt(++i) !== ']');
-            let tmp = parsedCode.substring(j, i + 1);
-            let x = tmp.replace(/ /gi, '');
-            let y = x.replace(/\n/gi, '');
-            res += y;
-        }
-        else res += parsedCode.charAt(i);
+    let funDecl = exp.body[0].params;
+    for(let i = 0; i < funDecl.length; i++)
+    {
+        env[funDecl[i].name] = paramsArr[i];
     }
-    return res;
+    parseBlock(exp.body[0].body.body, env, ['st'], true);
+    if(diagram !== '')
+        diagram = 'st=>start\n' + diagram;
+    return diagram;
 }
 
-const parseExp = (exp, curEnv, parsedParams) => {
-    return exp === null | exp === undefined | exp === []? exp :
-        exp.type === 'FunctionDeclaration' |
-    exp.type === 'VariableDeclaration' |
-    exp.type === 'ExpressionStatement' ? parseFuncDecExpBlock(exp, curEnv, parsedParams) :
-            exp.type === 'BlockStatement'? parseFuncDecExpBlock(exp, curEnv,parsedParams) :
-                exp.type === 'WhileStatement' |
-        exp.type === 'IfStatement' ? parseCond(exp, curEnv, parsedParams) :
-                    parseReturn(exp, curEnv);
+const parseBlock = (arr, curEnv, lastNodes, onFlow) => {
+    for (let i = 0; i < arr.length; i++) {
+        if (isLetOrAss(arr[i])) {
+            let response = createNodeOfLetAndAss(arr, curEnv, lastNodes, i, onFlow);
+            lastNodes = response[0];
+            i = response[1] - 1;
+        }
+        else if (isWhileOrLoop(arr[i])) {
+            lastNodes = createNodeOfWhileOrIf(arr[i], curEnv, lastNodes, onFlow);
+        }
+        else {
+            lastNodes = createNodeOfReturn(arr[i], curEnv, lastNodes, onFlow);
+        }
+    }
+    return lastNodes;
 };
 
-const parseCond = (exp, curEnv, parsedParams) =>{
-    return exp.type === 'WhileStatement' ? parseWhile(exp, curEnv, parsedParams) :
-        parseIf(exp, curEnv, parsedParams);
+const isWhileOrLoop = (exp) =>{
+    return exp.type === 'WhileStatement' ||
+        exp.type === 'IfStatement';
 };
 
-const parseFuncDecExpBlock = (exp, curEnv, parsedParams) =>{
-    return exp.type === 'FunctionDeclaration' ? parseFun(exp, curEnv, parsedParams):
-        exp.type === 'VariableDeclaration' ? parseVarDec(exp.declarations, curEnv) :
-            exp.type === 'ExpressionStatement' ? parseAssignment(exp, curEnv) :
-                parseBlock(exp, curEnv, parsedParams);
+const isLetOrAss = (exp) =>{
+    return exp.type === 'VariableDeclaration' ||
+        exp.type === 'ExpressionStatement';
 };
 
-const parseFun = (funDec, curEnv, parsedParams) => {
-    parsedParams = makeParams(parsedParams, funDec.params);
-    funcDecl = funDec.params;
-    let newBody = parseExp(funDec.body, curEnv, parsedParams);
-    funDec.body = newBody;
-    return funDec;
+const parseLetAssMem = (exp, curEnv) => {
+    return exp.type === 'VariableDeclaration' ? parseVarDec(exp, curEnv):
+        parseAssignmentUpdate(exp.expression, curEnv);
 };
 
-const parseVarDec = (varDecArray, curEnv) => {
-    varDecArray.forEach ((varDec) => {
+const parseAssignmentUpdate = (exp, curEnv) => {
+    if(exp.type === 'AssignmentExpression')
+        curEnv[exp.left.name] = subAndEval(exp.right, curEnv);
+    else
+        curEnv[exp.argument.name]++;
+    return escodegen.generate(exp);
+};
+
+const parseVarDec = (varDec, curEnv) => {
+    varDec.declarations.forEach ((varDec) => {
         let variable = varDec.id.name;
         if(varDec.init)
-            curEnv[variable] = subs(varDec.init, curEnv, false);
+            curEnv[variable] = subAndEval(varDec.init, curEnv);
     });
-    numOfRows++;
-    return null;
+    let toAdd = escodegen.generate(varDec);
+    return toAdd.substring(4, toAdd.length - 1);
 };
 
-function subs(exp, curEnv, args) {
-    let tmp = escodegen.generate(exp);
-    let newExp = esprima.parseScript(tmp).body[0].expression;
-    if(!args) newExp = exp;
-    if(newExp.type == 'Identifier'){
-        let newVal = curEnv[newExp.name];
-        if(newVal)
-            newExp = newVal;
-        return newExp;
-    }
-    return subsHelper(newExp, curEnv, args);
-}
-
-function subsHelper(newExp, curEnv, args) {
-    if(newExp.type == 'BinaryExpression'){
-        newExp.left = subs(newExp.left, curEnv, args);
-        newExp.right = subs(newExp.right, curEnv, args);
-    }
-    else if(newExp.type == 'MemberExpression'){
-        newExp.object = subs(newExp.object, curEnv, args);
-        newExp.property = subs(newExp.property, curEnv, args);
-    }
-    else if(newExp.type == 'ArrayExpression'){
-        newExp.elements = newExp.elements.map((x) => subs(x, curEnv, args));
-    }
-    return newExp;
-}
-
-const parseAssignment = (ass, curEnv) => {
-    let variable = ass.expression.left.name;
-    ass.expression.right = subs(ass.expression.right, curEnv, false);
-    curEnv[variable] = subs(ass.expression.right, curEnv, false);
-    if(argContain(variable))
-        return ass;
-    else numOfRows++;
-    return null;
-};
-
-function argContain (variable){
-    for(let i = 0; i < funcDecl.length; i++){
-        if(funcDecl[i].name == variable)
-            return true;
-    }
-    return false;
-}
-
-
-const parseWhile = (whi, curEnv, parsedParams) => {
-    whi.test = subs(whi.test, curEnv, false);
-    redsAndGreens[whi.loc.start.line - numOfRows] =
-        eval(escodegen.generate(subs(whi.test, parsedParams, true)));
-    let tmpEnv = Object.assign({}, curEnv);
-    whi.body = parseExp(whi.body, tmpEnv, parsedParams);
-    return whi;
-};
-
-const parseBlock = (block, curEnv, parsedParams) => {
-    let newBlock = [];
-    block.body.forEach((exp) => {
-        let newExp = parseExp(exp, curEnv, parsedParams);
-        newBlock = [...newBlock, newExp];
+const createNodeOfReturn = (expr, curEnv, lastNodes, onFlow) => {
+    let exprS = escodegen.generate(expr);
+    exprS = exprS.substring(0, exprS.length - 1);
+    diagram += 'op' + nodeNum + '=>start: '
+            + exprS;
+    if(onFlow)
+        diagram += ' | onFlow';
+    diagram += '\n';
+    lastNodes.forEach((node) => {
+        diagram += node + '->' + 'op' + nodeNum + '\n';
     });
-    block.body = newBlock.filter(exp => exp);
-    return block;
+    nodeNum++;
+    return [];
 };
 
-const parseIf = (ifState, curEnv, parsedParams) => {
-    ifState.test = subs(ifState.test, curEnv, false);
+const createNodeOfWhileOrIf = (expr, curEnv, lastNodes, onFlow) =>{
+    if(expr.type === 'WhileStatement') {
+        diagram += 'op' + nodeNum + '=>operation: NULL';
+        if (onFlow)
+            diagram += '| onFlow';
+        diagram += '\n';
+        lastNodes.forEach((node) => {
+            diagram += node + '->op' + nodeNum + '\n';
+        });
+        nodeNum++;
+        return parseWhile(expr, curEnv, ['op' + (nodeNum - 1)], onFlow);
+    }
+    else {
+        nodeNum++;
+        return parseIf(expr, curEnv, lastNodes, onFlow);
+    }
+};
+
+const parseIf = (exp, curEnv, lastNodes, onFlow) => {
+    let testNode = 'cond' + nodeNum;
+    diagram += testNode + '=>condition: ' + escodegen.generate(exp.test);
+    if(onFlow)
+        diagram += '| onFlow';
+    diagram += '\n';
+    lastNodes.forEach((node) => {
+        diagram += node + '->' + testNode + '\n';
+    });
     let tmpEnv = Object.assign({}, curEnv);
-    let x = subs(ifState.test, parsedParams, true);
-    redsAndGreens[ifState.loc.start.line - numOfRows] =
-        eval(escodegen.generate(x));
-    let newCons = parseExp(ifState.consequent, tmpEnv, parsedParams);
-    ifState.consequent = newCons;
+    let newConsNodes = [], newAltNodes = [];
+    newConsNodes = parseConseq(exp, tmpEnv, testNode, onFlow, curEnv, '(yes)');
     tmpEnv = Object.assign({}, curEnv);
-    if(ifState.alternate)
-        numOfRows++;
-    let newAlt = parseExp(ifState.alternate, tmpEnv, parsedParams);
-    ifState.alternate = newAlt;
-    return ifState;
+    if(exp.alternate) {
+        newAltNodes = parseAlt(exp, tmpEnv, testNode, onFlow, curEnv, '(no)');
+    }
+    return newConsNodes.concat(newAltNodes);
 };
 
-const parseReturn = (returnState, curEnv) => {
-    returnState.argument = subs(returnState.argument, curEnv, false);
-    return returnState;
+const parseConseq = (exp, tmpEnv, testNode, onFlow, curEnv, yesOrNo) => {
+    let body = exp.consequent;
+    if (exp.consequent.type === 'BlockStatement')
+        body = body.body;
+    else body = [body];
+    return parseBlock(body, tmpEnv, [testNode + yesOrNo],
+        onFlow && subAndEval(exp.test, curEnv));
 };
 
-export {parseCode};
+const parseAlt = (exp, tmpEnv, testNode, onFlow, curEnv, yesOrNo) => {
+    let body = exp.alternate;
+    if (exp.alternate.type === 'BlockStatement')
+        body = body.body;
+    else body = [body];
+    return parseBlock(body, tmpEnv, [testNode + yesOrNo],
+        onFlow && !subAndEval(exp.test, curEnv));
+};
+
+const parseWhile = (exp, curEnv, lastNodes, onFlow) => {
+    let testNode = 'cond' + nodeNum;
+    diagram += testNode + '=>condition: ' + escodegen.generate(exp.test);
+    if(onFlow)
+        diagram += '| onFlow';
+    diagram += '\n' + lastNodes[0] + '->' + testNode + '\n';
+    let tmpEnv = Object.assign({}, curEnv);
+    nodeNum++;
+    let body = exp.body;
+    if (exp.body.type === 'BlockStatement')
+        body = body.body;
+    else
+        body = [body];
+    let newNodes = parseBlock(body, tmpEnv, [testNode + '(yes)'], subAndEval(exp.test, curEnv) && onFlow);
+    newNodes.forEach((node) => {
+        diagram += node + '->' + lastNodes[0] + '\n';
+    });
+    return [testNode + '(no)'];
+};
+
+const createNodeOfLetAndAss = (arr, curEnv, lastNodes, i, onFlow) =>{
+    diagram += 'op' + nodeNum + '=>operation: ';
+    while (i < arr.length && (arr[i].type === 'VariableDeclaration' ||
+    arr[i].type === 'ExpressionStatement'))
+        diagram += parseLetAssMem(arr[i++], curEnv) + '\n';
+    diagram = diagram.substring(0, diagram.length - 1);
+    if(onFlow)
+        diagram += '| onFlow';
+    diagram += '\n';
+    lastNodes.forEach((node) => {
+        diagram += node + '->' + 'op' + nodeNum + '\n';
+    });
+    nodeNum++;
+    return [['op' + (nodeNum - 1)], i];
+};
+
+function subAndEval(exp, curEnv) {
+    if(exp.type === 'Identifier')
+        return curEnv[exp.name];
+    return subsHelper(exp, curEnv);
+}
+
+function subsHelper(exp, curEnv) {
+    let tmpExp = escodegen.generate(exp);
+    tmpExp = esprima.parseScript(tmpExp).body[0].expression;
+    if(tmpExp.type === 'BinaryExpression'){
+        tmpExp.left = esprima.parseScript('' + subAndEval(tmpExp.left, curEnv)).body[0].expression;
+        tmpExp.right = esprima.parseScript('' + subAndEval(tmpExp.right, curEnv)).body[0].expression;
+        return eval(escodegen.generate(tmpExp));
+    }
+    else if(tmpExp.type === 'MemberExpression'){
+        tmpExp.object = esprima.parseScript('[' + subAndEval(tmpExp.object, curEnv) + ']').body[0].expression.elements;
+        tmpExp.property = esprima.parseScript('' + subAndEval(tmpExp.property, curEnv)).body[0].expression;
+        let ind = escodegen.generate(tmpExp.property);
+        let num = escodegen.generate(tmpExp.object[ind]);
+        return eval('' + num);
+    }
+    else if(tmpExp.type === 'ArrayExpression'){
+        return tmpExp.elements.map((x) => subAndEval(x, curEnv));
+    }
+    return eval(escodegen.generate(tmpExp));
+}
