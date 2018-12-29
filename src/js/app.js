@@ -7,7 +7,6 @@ $(document).ready(function () {
         let paramsToParse = $('#paramPlaceholder').val();
         let resuletDiagram = makeDiagram(codeToParse, paramsToParse);
         if(resuletDiagram !== '') {
-            console.log(resuletDiagram);
             const diagram = flowchart.parse(resuletDiagram);
             let opt = {
                 'x': 0,
