@@ -1,5 +1,5 @@
 import assert from 'assert';
-import {makeDiagram} from '../src/js/code-analyzer';
+import {makeDiagram, makeProps} from '../src/js/code-analyzer';
 
 describe('worst cases', () => {
     let input1 = 'function foo(){}';
@@ -504,5 +504,23 @@ describe('add ons', () => {
 
     it('while off flow', () => {
         assert.deepEqual(makeDiagram(input21,params21), result21);
+    });
+
+    let input22 = 'function foo(x){\n' +
+        '   let a;\n' +
+        '   return x;\n' +
+        '}';
+    let result22 = 'st=>start\n' +
+        'op1=>operation: (1)\n' +
+        'a| onFlow\n' +
+        'st->op1\n' +
+        'op2=>start: (2)\n' +
+        'return x | onFlow\n' +
+        'op1->op2\n';
+    let params22 = '1';
+
+    it('add  on 1', () => {
+        makeProps();
+        assert.deepEqual(makeDiagram(input22,params22), result22);
     });
 });
