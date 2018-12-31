@@ -10,7 +10,7 @@ $(document).ready(function () {
         if(resultDiagram !== '') {
             const diagram = flowchart.parse(resultDiagram);
             let prop = makeProps();
-            diagram.drawSVG('diagram', prop);9
+            diagram.drawSVG('diagram', prop);
         }
     });
 });
