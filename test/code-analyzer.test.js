@@ -13,7 +13,7 @@ describe('worst cases', () => {
     let input2 = 'function foo(){' +
         'return 1;}';
     let result2 = 'st=>start\n' +
-        'op1=>start: return 1 | onFlow\n' +
+        'op1=>start: (1)\nreturn 1 | onFlow\n' +
         'st->op1\n';
     let params2 = '1';
 
@@ -24,7 +24,7 @@ describe('worst cases', () => {
     let input3 = 'function foo(x){' +
         'return x;}';
     let result3 = 'st=>start\n' +
-        'op1=>start: return x | onFlow\n' +
+        'op1=>start: (1)\nreturn x | onFlow\n' +
         'st->op1\n';
     let params3 = '1';
 
@@ -40,9 +40,9 @@ describe('let and assignment expressions', () => {
         '    return x;\n' +
         '}';
     let result4 = 'st=>start\n' +
-        'op1=>operation: a = 1| onFlow\n' +
+        'op1=>operation: (1)\na = 1| onFlow\n' +
         'st->op1\n' +
-        'op2=>start: return x | onFlow\n' +
+        'op2=>start: (2)\nreturn x | onFlow\n' +
         'op1->op2\n';
     let params4 = '1';
 
@@ -56,10 +56,10 @@ describe('let and assignment expressions', () => {
         '    return x;\n' +
         '}';
     let result5 = 'st=>start\n' +
-        'op1=>operation: a = 1\n' +
+        'op1=>operation: (1)\na = 1\n' +
         'a = a + x| onFlow\n' +
         'st->op1\n' +
-        'op2=>start: return x | onFlow\n' +
+        'op2=>start: (2)\nreturn x | onFlow\n' +
         'op1->op2\n';
     let params5 = '1';
 
@@ -78,15 +78,20 @@ describe('if statments', () => {
         '   return x;\n' +
         '}';
     let result6 = 'st=>start\n' +
-        'op1=>operation: a = 1\n' +
+        'op1=>operation: (1)\n' +
+        'a = 1\n' +
         'a = a + x| onFlow\n' +
         'st->op1\n' +
-        'cond3=>condition: a > x| onFlow\n' +
-        'op1->cond3\n' +
-        'op3=>operation: x = x + 1| onFlow\n' +
-        'cond3(yes)->op3\n' +
-        'op4=>start: return x | onFlow\n' +
-        'op3->op4\n';
+        'cond2=>condition: (2)\n' +
+        'a > x| onFlow\n' +
+        'op1->cond2\n' +
+        'op3=>operation: (3)\n' +
+        'x = x + 1| onFlow\n' +
+        'cond2(yes)->op3\n' +
+        'op4=>start: (4)\n' +
+        'return x | onFlow\n' +
+        'op3->op4\n' +
+        'cond2(no)->op4\n';
     let params6 = '1,2';
 
     it('simple if', () => {
@@ -105,16 +110,21 @@ describe('if statments', () => {
         '    return x;\n' +
         '}';
     let result7 = 'st=>start\n' +
-        'op1=>operation: a = 1\n' +
+        'op1=>operation: (1)\n' +
+        'a = 1\n' +
         'a = a + x| onFlow\n' +
         'st->op1\n' +
-        'cond3=>condition: a > x| onFlow\n' +
-        'op1->cond3\n' +
-        'op3=>operation: x = x + 1| onFlow\n' +
-        'cond3(yes)->op3\n' +
-        'op4=>operation: x = x + 2\n' +
-        'cond3(no)->op4\n' +
-        'op5=>start: return x | onFlow\n' +
+        'cond2=>condition: (2)\n' +
+        'a > x| onFlow\n' +
+        'op1->cond2\n' +
+        'op3=>operation: (3)\n' +
+        'x = x + 1| onFlow\n' +
+        'cond2(yes)->op3\n' +
+        'op4=>operation: (4)\n' +
+        'x = x + 2\n' +
+        'cond2(no)->op4\n' +
+        'op5=>start: (5)\n' +
+        'return x | onFlow\n' +
         'op3->op5\n' +
         'op4->op5\n';
     let params7 = '1,2';
@@ -133,17 +143,23 @@ describe('if statments', () => {
         '    return x;\n' +
         '}';
     let result8 = 'st=>start\n' +
-        'cond2=>condition: x < 1| onFlow\n' +
-        'st->cond2\n' +
-        'op2=>operation: x = x + 1\n' +
-        'cond2(yes)->op2\n' +
-        'cond4=>condition: x < 2| onFlow\n' +
-        'cond2(no)->cond4\n' +
-        'op4=>operation: x = x + 2| onFlow\n' +
-        'cond4(yes)->op4\n' +
-        'op5=>operation: x = x + 3\n' +
-        'cond4(no)->op5\n' +
-        'op6=>start: return x | onFlow\n' +
+        'cond1=>condition: (1)\n' +
+        'x < 1| onFlow\n' +
+        'st->cond1\n' +
+        'op2=>operation: (2)\n' +
+        'x = x + 1\n' +
+        'cond1(yes)->op2\n' +
+        'cond3=>condition: (3)\n' +
+        'x < 2| onFlow\n' +
+        'cond1(no)->cond3\n' +
+        'op4=>operation: (4)\n' +
+        'x = x + 2| onFlow\n' +
+        'cond3(yes)->op4\n' +
+        'op5=>operation: (5)\n' +
+        'x = x + 3\n' +
+        'cond3(no)->op5\n' +
+        'op6=>start: (6)\n' +
+        'return x | onFlow\n' +
         'op2->op6\n' +
         'op4->op6\n' +
         'op5->op6\n';
@@ -164,16 +180,21 @@ describe('while statments', () => {
         '    return a;\n' +
         '}';
     let result9 = 'st=>start\n' +
-        'op1=>operation: a = 0| onFlow\n' +
+        'op1=>operation: (1)\n' +
+        'a = 0| onFlow\n' +
         'st->op1\n' +
-        'op2=>operation: NULL| onFlow\n' +
+        'op2=>operation: (2)\n' +
+        ' NULL| onFlow\n' +
         'op1->op2\n' +
-        'cond3=>condition: x[a] < 1| onFlow\n' +
+        'cond3=>condition: (3)\n' +
+        'x[a] < 1| onFlow\n' +
         'op2->cond3\n' +
-        'op4=>operation: a++| onFlow\n' +
+        'op4=>operation: (4)\n' +
+        'a++| onFlow\n' +
         'cond3(yes)->op4\n' +
         'op4->op2\n' +
-        'op5=>start: return a | onFlow\n' +
+        'op5=>start: (5)\n' +
+        'return a | onFlow\n' +
         'cond3(no)->op5\n';
     let params9 = '[0,1]';
 
@@ -200,21 +221,28 @@ describe('examples', () => {
         '    return c;\n' +
         '}';
     let result10 = 'st=>start\n' +
-        'op1=>operation: a = x + 1\n' +
+        'op1=>operation: (1)\n' +
+        'a = x + 1\n' +
         'b = a + y\n' +
         'c = 0| onFlow\n' +
         'st->op1\n' +
-        'cond3=>condition: b < z| onFlow\n' +
-        'op1->cond3\n' +
-        'op3=>operation: c = c + 5\n' +
-        'cond3(yes)->op3\n' +
-        'cond5=>condition: b < z * 2| onFlow\n' +
-        'cond3(no)->cond5\n' +
-        'op5=>operation: c = c + x + 5| onFlow\n' +
-        'cond5(yes)->op5\n' +
-        'op6=>operation: c = c + z + 5\n' +
-        'cond5(no)->op6\n' +
-        'op7=>start: return c | onFlow\n' +
+        'cond2=>condition: (2)\n' +
+        'b < z| onFlow\n' +
+        'op1->cond2\n' +
+        'op3=>operation: (3)\n' +
+        'c = c + 5\n' +
+        'cond2(yes)->op3\n' +
+        'cond4=>condition: (4)\n' +
+        'b < z * 2| onFlow\n' +
+        'cond2(no)->cond4\n' +
+        'op5=>operation: (5)\n' +
+        'c = c + x + 5| onFlow\n' +
+        'cond4(yes)->op5\n' +
+        'op6=>operation: (6)\n' +
+        'c = c + z + 5\n' +
+        'cond4(no)->op6\n' +
+        'op7=>start: (7)\n' +
+        'return c | onFlow\n' +
         'op3->op7\n' +
         'op5->op7\n' +
         'op6->op7\n';
@@ -238,20 +266,25 @@ describe('examples', () => {
         '   return z;\n' +
         '}\n';
     let result11 = 'st=>start\n' +
-        'op1=>operation: a = x + 1\n' +
+        'op1=>operation: (1)\n' +
+        'a = x + 1\n' +
         'b = a + y\n' +
         'c = 0| onFlow\n' +
         'st->op1\n' +
-        'op2=>operation: NULL| onFlow\n' +
+        'op2=>operation: (2)\n' +
+        ' NULL| onFlow\n' +
         'op1->op2\n' +
-        'cond3=>condition: a < z| onFlow\n' +
+        'cond3=>condition: (3)\n' +
+        'a < z| onFlow\n' +
         'op2->cond3\n' +
-        'op4=>operation: c = a + b\n' +
+        'op4=>operation: (4)\n' +
+        'c = a + b\n' +
         'z = c * 2\n' +
         'a++| onFlow\n' +
         'cond3(yes)->op4\n' +
         'op4->op2\n' +
-        'op5=>start: return z | onFlow\n' +
+        'op5=>start: (5)\n' +
+        'return z | onFlow\n' +
         'cond3(no)->op5\n';
     let params11 = '1,2,3';
 
@@ -268,15 +301,20 @@ describe('examples', () => {
         '   return x;\n' +
         '}';
     let result12 = 'st=>start\n' +
-        'op1=>operation: a = [1]| onFlow\n' +
+        'op1=>operation: (1)\n' +
+        'a = [1]| onFlow\n' +
         'st->op1\n' +
-        'cond3=>condition: x > 1| onFlow\n' +
-        'op1->cond3\n' +
-        'op3=>operation: x = x + 1\n' +
-        'cond3(yes)->op3\n' +
-        'op4=>operation: x = x + 2| onFlow\n' +
-        'cond3(no)->op4\n' +
-        'op5=>start: return x | onFlow\n' +
+        'cond2=>condition: (2)\n' +
+        'x > 1| onFlow\n' +
+        'op1->cond2\n' +
+        'op3=>operation: (3)\n' +
+        'x = x + 1\n' +
+        'cond2(yes)->op3\n' +
+        'op4=>operation: (4)\n' +
+        'x = x + 2| onFlow\n' +
+        'cond2(no)->op4\n' +
+        'op5=>start: (5)\n' +
+        'return x | onFlow\n' +
         'op3->op5\n' +
         'op4->op5\n';
     let params12 = '1';
@@ -293,9 +331,11 @@ describe('add ons', () => {
         'return a;\n' +
         '}';
     let result13 = 'st=>start\n' +
-        'op1=>operation: a = [1]| onFlow\n' +
+        'op1=>operation: (1)\n' +
+        'a = [1]| onFlow\n' +
         'st->op1\n' +
-        'op2=>start: return a | onFlow\n' +
+        'op2=>start: (2)\n' +
+        'return a | onFlow\n' +
         'op1->op2\n';
     let params13 = '[1]';
 
@@ -311,15 +351,20 @@ describe('add ons', () => {
         '   return x;\n' +
         '}';
     let result14 = 'st=>start\n' +
-        'op1=>operation: a = 1\n' +
+        'op1=>operation: (1)\n' +
+        'a = 1\n' +
         'a = a + x| onFlow\n' +
         'st->op1\n' +
-        'cond3=>condition: a > x| onFlow\n' +
-        'op1->cond3\n' +
-        'op3=>operation: x = x + 1| onFlow\n' +
-        'cond3(yes)->op3\n' +
-        'op4=>start: return x | onFlow\n' +
-        'op3->op4\n';
+        'cond2=>condition: (2)\n' +
+        'a > x| onFlow\n' +
+        'op1->cond2\n' +
+        'op3=>operation: (3)\n' +
+        'x = x + 1| onFlow\n' +
+        'cond2(yes)->op3\n' +
+        'op4=>start: (4)\n' +
+        'return x | onFlow\n' +
+        'op3->op4\n' +
+        'cond2(no)->op4\n';
     let params14 = '1,2';
 
     it('simple if2', () => {
@@ -335,16 +380,21 @@ describe('add ons', () => {
         '   return x;\n' +
         '}';
     let result15 = 'st=>start\n' +
-        'op1=>operation: a = 1\n' +
+        'op1=>operation: (1)\n' +
+        'a = 1\n' +
         'a = a + x| onFlow\n' +
         'st->op1\n' +
-        'cond3=>condition: a > x| onFlow\n' +
-        'op1->cond3\n' +
-        'op3=>operation: x = x + 1| onFlow\n' +
-        'cond3(yes)->op3\n' +
-        'op4=>operation: x = x + 1\n' +
-        'cond3(no)->op4\n' +
-        'op5=>start: return x | onFlow\n' +
+        'cond2=>condition: (2)\n' +
+        'a > x| onFlow\n' +
+        'op1->cond2\n' +
+        'op3=>operation: (3)\n' +
+        'x = x + 1| onFlow\n' +
+        'cond2(yes)->op3\n' +
+        'op4=>operation: (4)\n' +
+        'x = x + 1\n' +
+        'cond2(no)->op4\n' +
+        'op5=>start: (5)\n' +
+        'return x | onFlow\n' +
         'op3->op5\n' +
         'op4->op5\n';
     let params15 = '1,2';
@@ -360,16 +410,21 @@ describe('add ons', () => {
         '    return a;\n' +
         '}';
     let result16 = 'st=>start\n' +
-        'op1=>operation: a = 1| onFlow\n' +
+        'op1=>operation: (1)\n' +
+        'a = 1| onFlow\n' +
         'st->op1\n' +
-        'op2=>operation: NULL| onFlow\n' +
+        'op2=>operation: (2)\n' +
+        ' NULL| onFlow\n' +
         'op1->op2\n' +
-        'cond3=>condition: a < 2| onFlow\n' +
+        'cond3=>condition: (3)\n' +
+        'a < 2| onFlow\n' +
         'op2->cond3\n' +
-        'op4=>operation: a++| onFlow\n' +
+        'op4=>operation: (4)\n' +
+        'a++| onFlow\n' +
         'cond3(yes)->op4\n' +
         'op4->op2\n' +
-        'op5=>start: return a | onFlow\n' +
+        'op5=>start: (5)\n' +
+        'return a | onFlow\n' +
         'cond3(no)->op5\n';
     let params16 = '1';
 
@@ -377,42 +432,17 @@ describe('add ons', () => {
         assert.deepEqual(makeDiagram(input16,params16), result16);
     });
 
-    let input18 = 'function foo(x, y){\n' +
-        '   let a;\n' +
-        '   a = 1 + x;    \n' +
-        '   if(a > x)\n' +
-        '       x = x + 1;\n' +
-        '   else {x = x + 1;}\n' +
-        '   return x;\n' +
-        '}';
-    let result18 = 'st=>start\n' +
-        'op1=>operation: a\n' +
-        'a = 1 + x| onFlow\n' +
-        'st->op1\n' +
-        'cond3=>condition: a > x| onFlow\n' +
-        'op1->cond3\n' +
-        'op3=>operation: x = x + 1| onFlow\n' +
-        'cond3(yes)->op3\n' +
-        'op4=>operation: x = x + 1\n' +
-        'cond3(no)->op4\n' +
-        'op5=>start: return x | onFlow\n' +
-        'op3->op5\n' +
-        'op4->op5\n';
-    let params18 = '1,2';
-
-    it('simple if2', () => {
-        assert.deepEqual(makeDiagram(input18,params18), result18);
-    });
-
     let input19 = 'function foo(x){\n' +
         '    if(1 < 0)\n' +
         '        return x;\n' +
         '}';
     let result19 = 'st=>start\n' +
-        'cond2=>condition: 1 < 0| onFlow\n' +
-        'st->cond2\n' +
-        'op2=>start: return x\n' +
-        'cond2(yes)->op2\n';
+        'cond1=>condition: (1)\n' +
+        '1 < 0| onFlow\n' +
+        'st->cond1\n' +
+        'op2=>start: (2)\n' +
+        'return x\n' +
+        'cond1(yes)->op2\n';
     let params19 = '1';
 
     it('simple if3', () => {
@@ -426,17 +456,23 @@ describe('add ons', () => {
         '        return x;\n' +
         '    }';
     let result20 = 'st=>start\n' +
-        'cond2=>condition: 1 < 0| onFlow\n' +
-        'st->cond2\n' +
-        'op2=>operation: NULL\n' +
-        'cond2(yes)->op2\n' +
-        'cond3=>condition: x < 0\n' +
+        'cond1=>condition: (1)\n' +
+        '1 < 0| onFlow\n' +
+        'st->cond1\n' +
+        'op2=>operation: (2)\n' +
+        ' NULL\n' +
+        'cond1(yes)->op2\n' +
+        'cond3=>condition: (3)\n' +
+        'x < 0\n' +
         'op2->cond3\n' +
-        'op4=>operation: x = x + 1\n' +
+        'op4=>operation: (4)\n' +
+        'x = x + 1\n' +
         'cond3(yes)->op4\n' +
         'op4->op2\n' +
-        'op5=>start: return x | onFlow\n' +
-        'cond3(no)->op5\n';
+        'op5=>start: (5)\n' +
+        'return x | onFlow\n' +
+        'cond3(no)->op5\n' +
+        'cond1(no)->op5\n';
     let params20 = '1';
 
     it('while off flow', () => {
@@ -450,14 +486,20 @@ describe('add ons', () => {
         '        return x;\n' +
         '    }';
     let result21 = 'st=>start\n' +
-        'cond2=>condition: 1 < 0| onFlow\n' +
-        'st->cond2\n' +
-        'cond3=>condition: x < 0\n' +
-        'cond2(yes)->cond3\n' +
-        'op3=>operation: x = x + 1\n' +
-        'cond3(yes)->op3\n' +
-        'op4=>start: return x | onFlow\n' +
-        'op3->op4\n';
+        'cond1=>condition: (1)\n' +
+        '1 < 0| onFlow\n' +
+        'st->cond1\n' +
+        'cond2=>condition: (2)\n' +
+        'x < 0\n' +
+        'cond1(yes)->cond2\n' +
+        'op3=>operation: (3)\n' +
+        'x = x + 1\n' +
+        'cond2(yes)->op3\n' +
+        'op4=>start: (4)\n' +
+        'return x | onFlow\n' +
+        'op3->op4\n' +
+        'cond2(no)->op4\n' +
+        'cond1(no)->op4\n';
     let params21 = '1';
 
     it('while off flow', () => {

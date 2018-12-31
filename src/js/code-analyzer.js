@@ -21,6 +21,21 @@ export function makeDiagram(code, params) {
     return diagram;
 }
 
+export function makeProps(){
+    return {'x': 0, 'y': 0, 'line-width': 3,
+        'line-length': 50, 'text-margin': 10,
+        'font-size': 14, 'font-color': 'black',
+        'line-color': 'black', 'element-color': 'black',
+        'fill': 'white', 'yes-text': 'T',
+        'no-text': 'F', 'arrow-end': 'block',
+        'scale': 1, 'symbols': {
+            'start': {'font-color': 'black', 'element-color': 'red',
+                'fill': 'white', 'font-size': 16, 'line-width': 4},
+            'end': { 'class': 'end-element'}},
+        'flowstate': {
+            'onFlow': {'fill': '#88B04D', 'font-size': 12},}};
+}
+
 const parseBlock = (arr, curEnv, lastNodes, onFlow) => {
     for (let i = 0; i < arr.length; i++) {
         if (isLetOrAss(arr[i])) {
@@ -74,8 +89,7 @@ const parseVarDec = (varDec, curEnv) => {
 const createNodeOfReturn = (expr, curEnv, lastNodes, onFlow) => {
     let exprS = escodegen.generate(expr);
     exprS = exprS.substring(0, exprS.length - 1);
-    diagram += 'op' + nodeNum + '=>start: '
-            + exprS;
+    diagram += 'op' + nodeNum + '=>start: (' + nodeNum + ')\n' + exprS;
     if(onFlow)
         diagram += ' | onFlow';
     diagram += '\n';
@@ -88,7 +102,7 @@ const createNodeOfReturn = (expr, curEnv, lastNodes, onFlow) => {
 
 const createNodeOfWhileOrIf = (expr, curEnv, lastNodes, onFlow) =>{
     if(expr.type === 'WhileStatement') {
-        diagram += 'op' + nodeNum + '=>operation: NULL';
+        diagram += 'op' + nodeNum + '=>operation: (' + nodeNum + ')\n NULL';
         if (onFlow)
             diagram += '| onFlow';
         diagram += '\n';
@@ -98,15 +112,13 @@ const createNodeOfWhileOrIf = (expr, curEnv, lastNodes, onFlow) =>{
         nodeNum++;
         return parseWhile(expr, curEnv, ['op' + (nodeNum - 1)], onFlow);
     }
-    else {
-        nodeNum++;
+    else
         return parseIf(expr, curEnv, lastNodes, onFlow);
-    }
 };
 
 const parseIf = (exp, curEnv, lastNodes, onFlow) => {
     let testNode = 'cond' + nodeNum;
-    diagram += testNode + '=>condition: ' + escodegen.generate(exp.test);
+    diagram += testNode + '=>condition: (' + nodeNum + ')\n' + escodegen.generate(exp.test);
     if(onFlow)
         diagram += '| onFlow';
     diagram += '\n';
@@ -114,12 +126,14 @@ const parseIf = (exp, curEnv, lastNodes, onFlow) => {
         diagram += node + '->' + testNode + '\n';
     });
     let tmpEnv = Object.assign({}, curEnv);
-    let newConsNodes = [], newAltNodes = [];
+    nodeNum++;
+    let newConsNodes, newAltNodes = [];
     newConsNodes = parseConseq(exp, tmpEnv, testNode, onFlow, curEnv, '(yes)');
     tmpEnv = Object.assign({}, curEnv);
-    if(exp.alternate) {
+    if(exp.alternate)
         newAltNodes = parseAlt(exp, tmpEnv, testNode, onFlow, curEnv, '(no)');
-    }
+    else
+        newAltNodes = [testNode + '(no)'];
     return newConsNodes.concat(newAltNodes);
 };
 
@@ -143,7 +157,7 @@ const parseAlt = (exp, tmpEnv, testNode, onFlow, curEnv, yesOrNo) => {
 
 const parseWhile = (exp, curEnv, lastNodes, onFlow) => {
     let testNode = 'cond' + nodeNum;
-    diagram += testNode + '=>condition: ' + escodegen.generate(exp.test);
+    diagram += testNode + '=>condition: (' + nodeNum + ')\n' + escodegen.generate(exp.test);
     if(onFlow)
         diagram += '| onFlow';
     diagram += '\n' + lastNodes[0] + '->' + testNode + '\n';
@@ -162,7 +176,7 @@ const parseWhile = (exp, curEnv, lastNodes, onFlow) => {
 };
 
 const createNodeOfLetAndAss = (arr, curEnv, lastNodes, i, onFlow) =>{
-    diagram += 'op' + nodeNum + '=>operation: ';
+    diagram += 'op' + nodeNum + '=>operation: (' + nodeNum + ')\n';
     while (i < arr.length && (arr[i].type === 'VariableDeclaration' ||
     arr[i].type === 'ExpressionStatement'))
         diagram += parseLetAssMem(arr[i++], curEnv) + '\n';

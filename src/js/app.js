@@ -1,48 +1,16 @@
 import $ from 'jquery';
-import {makeDiagram} from './code-analyzer';
+import {makeDiagram, makeProps} from './code-analyzer';
+import * as flowchart from 'flowchart.js';
 
 $(document).ready(function () {
     $('#codeSubmissionButton').click(() => {
         let codeToParse = $('#codePlaceholder').val();
         let paramsToParse = $('#paramPlaceholder').val();
-        let resuletDiagram = makeDiagram(codeToParse, paramsToParse);
-        if(resuletDiagram !== '') {
-            console.log(resuletDiagram);
-            const diagram = flowchart.parse(resuletDiagram);
-            let opt = {
-                'x': 0,
-                'y': 0,
-                'line-width': 3,
-                'line-length': 50,
-                'text-margin': 10,
-                'font-size': 14,
-                'font-color': 'black',
-                'line-color': 'black',
-                'element-color': 'black',
-                'fill': 'white',
-                'yes-text': 'T',
-                'no-text': 'F',
-                'arrow-end': 'block',
-                'scale': 1,
-                // style symbol types
-                'symbols': {
-                    'start': {
-                        'font-color': 'black',
-                        'element-color': 'red',
-                        'fill': 'white',
-                        'font-size': 16,
-                        'line-width': 4
-                    },
-                    'end': {
-                        'class': 'end-element'
-                    }
-                },
-                // even flowstate support ;-)
-                'flowstate': {
-                    'onFlow': {'fill': '#88B04D', 'font-size': 12},
-                }
-            };
-            diagram.drawSVG('diagram', opt);
+        let resultDiagram = makeDiagram(codeToParse, paramsToParse);
+        if(resultDiagram !== '') {
+            const diagram = flowchart.parse(resultDiagram);
+            let prop = makeProps();
+            diagram.drawSVG('diagram', prop);
         }
     });
 });
